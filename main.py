@@ -77,7 +77,7 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
     except Exception as e:
         print(e)
     
-QUERY = 'pizza lang:es'
+QUERY = 'cambio climático OR economía circular OR espacios verde OR protección ambiental lang:es'
 EXPANSIONS = 'author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username'
 TWEET_FIELDS='author_id,conversation_id,created_at,entities,geo,id,lang,public_metrics,source,text'
 USER_FIELDS='created_at,description,entities,location,name,profile_image_url,public_metrics,url,username'
