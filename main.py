@@ -4,7 +4,7 @@ from datetime import datetime
 from TwitterAPI import TwitterAPI, TwitterOAuth, TwitterRequestError, TwitterConnectionError, HydrateType, OAuthType
 import json
 
-QUERY = '"pizza" OR "hamburguesa"'
+QUERY = '("pizza" OR "hamburguesa") location:"Argentina" lang:es'
 EXPANSIONS = 'author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username'
 TWEET_FIELDS='author_id,conversation_id,created_at,entities,geo,id,lang,public_metrics,source,text'
 USER_FIELDS='created_at,description,entities,location,name,profile_image_url,public_metrics,url,username'
@@ -15,9 +15,16 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
         o = TwitterOAuth.read_file()
         api = TwitterAPI(o.consumer_key, o.consumer_secret, auth_type=OAuthType.OAUTH2, api_version='2')
 
-        # ADD STREAM RULES
+        # DELETE STREAM RULES
+        r = api.request('tweets/search/stream/rules', method_override='GET')
+        rules = r.json()
+        if "data" in rules:
+            ids = list(map(lambda rule: rule["id"], rules["data"]))
+            api.request('tweets/search/stream/rules', {"delete": {"ids": ids}})
+        
 
-        r = api.request('tweets/search/stream/rules', {'add': [{'value':QUERY}]})
+        # ADD STREAM RULES
+        r = api.request('tweets/search/stream/rules', {'add': [{'value':query}]})
         print(f'[{r.status_code}] RULE ADDED: {json.dumps(r.json(), indent=2)}\n')
         if r.status_code != 201: exit()
 
@@ -30,9 +37,9 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
         # START STREAM
 
         r = api.request('tweets/search/stream', {
-                'expansions': EXPANSIONS,
-                'tweet.fields': TWEET_FIELDS,
-                'user.fields': USER_FIELDS,
+                'expansions': expansions,
+                'tweet.fields': tweet_fields,
+                'user.fields': user_fields,
             },
             hydrate_type=HydrateType.APPEND)
 
@@ -70,7 +77,7 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
     except Exception as e:
         print(e)
     
-QUERY = '"pizza" OR "burger"'
+QUERY = 'pizza lang:es'
 EXPANSIONS = 'author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username'
 TWEET_FIELDS='author_id,conversation_id,created_at,entities,geo,id,lang,public_metrics,source,text'
 USER_FIELDS='created_at,description,entities,location,name,profile_image_url,public_metrics,url,username'
