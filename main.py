@@ -1,3 +1,6 @@
+import os
+import sys
+from datetime import datetime
 from TwitterAPI import TwitterAPI, TwitterOAuth, TwitterRequestError, TwitterConnectionError, HydrateType, OAuthType
 import json
 
@@ -32,15 +35,24 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
             },
             hydrate_type=HydrateType.APPEND)
 
-        print(f'[{r.status_code}] START...')
         if r.status_code != 200: exit()
-        with open('data.json', 'a', encoding='utf-8') as f:
+        with open('data.json', 'r+', encoding='utf-8') as file:
+            cantidad_tweets = len(file.readlines())
+            file.seek(0, os.SEEK_END)
+
+            print("------------------------------------------------------------")
+            print(f"Proceso de recopilación iniciado: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+
             for item in r:
-                print(json.dumps(item, indent=2))
-                json.dump(item, f, ensure_ascii=False, indent=4)
+                json.dump(item, file, ensure_ascii=False, indent=None)
+                file.write('\n')
+
+                cantidad_tweets += 1
+                sys.stdout.write(f"\rTamaño actual del archivo: {file.tell() / 1000} kb | Cantidad de tweets: {cantidad_tweets}")
 
     except KeyboardInterrupt:
-        print('\nDone!')
+        print("\nProceso terminado: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        print("------------------------------------------------------------")
 
     except TwitterRequestError as e:
         print(f'\n{e.status_code}')
