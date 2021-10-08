@@ -34,7 +34,6 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
 
         print(f'[{r.status_code}] START...')
         if r.status_code != 200: exit()
-
         with open('data.json', 'a', encoding='utf-8') as f:
             for item in r:
                 print(json.dumps(item, indent=2))
