@@ -10,6 +10,7 @@ TWEET_FIELDS='author_id,conversation_id,created_at,entities,geo,id,lang,public_m
 USER_FIELDS='created_at,description,entities,location,name,profile_image_url,public_metrics,url,username'
 def stream_tweets(query, expansions, tweet_fields, user_fields):
     
+    datetimestart = datetime
     try:
         o = TwitterOAuth.read_file()
         api = TwitterAPI(o.consumer_key, o.consumer_secret, auth_type=OAuthType.OAUTH2, api_version='2')
@@ -41,7 +42,8 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
             file.seek(0, os.SEEK_END)
 
             print("------------------------------------------------------------")
-            print(f"Proceso de recopilación iniciado: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+            datetimestart = datetime.now()
+            print(f"Proceso de recopilación iniciado: " + datetimestart.strftime("%d/%m/%Y %H:%M:%S"))
 
             for item in r:
                 json.dump(item, file, ensure_ascii=False, indent=None)
@@ -51,7 +53,10 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
                 sys.stdout.write(f"\rTamaño actual del archivo: {file.tell() / 1000} kb | Cantidad de tweets: {cantidad_tweets}")
 
     except KeyboardInterrupt:
-        print("\nProceso terminado: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        datetimeend = datetime.now()
+        print("\nProceso terminado: " + datetimeend.strftime("%d/%m/%Y %H:%M:%S"))
+        datetimeend = datetimeend - datetimestart
+        print("Duración de la prueba " + (str(datetimeend)) + " horas/minutos/segundos")
         print("------------------------------------------------------------")
 
     except TwitterRequestError as e:
