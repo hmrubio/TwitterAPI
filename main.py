@@ -57,7 +57,11 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
 
         if r.status_code != 200:
             exit()
-        with open("data.json", "a+", encoding="utf-8") as file:
+        
+        if not os.path.exists("data.json"):
+            open("data.json", "x", encoding="utf-8")
+
+        with open("data.json", "r+", encoding="utf-8") as file:
             cantidad_tweets = len(file.readlines())
             file.seek(0, os.SEEK_END)
 
@@ -94,7 +98,6 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
         print(e)
     except Exception as e:
         print(e)
-
 
 QUERY = "cambio climático OR sequías OR calentamiento global OR economía circular OR espacios verde OR protección ambiental lang:es -is:retweet"
 EXPANSIONS = "author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username"
