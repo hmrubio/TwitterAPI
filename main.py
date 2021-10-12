@@ -11,12 +11,6 @@ from TwitterAPI import (
 )
 import json
 
-QUERY = '("pizza" OR "hamburguesa") location:"Argentina" lang:es'
-EXPANSIONS = "author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username"
-TWEET_FIELDS = "author_id,conversation_id,created_at,entities,geo,id,lang,public_metrics,source,text"
-USER_FIELDS = "created_at,description,entities,location,name,profile_image_url,public_metrics,url,username"
-
-
 def stream_tweets(query, expansions, tweet_fields, user_fields):
 
     datetimestart = datetime
@@ -106,4 +100,5 @@ QUERY = "cambio climático OR sequías OR calentamiento global OR economía circ
 EXPANSIONS = "author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username"
 TWEET_FIELDS = "author_id,conversation_id,created_at,entities,geo,id,lang,public_metrics,source,text"
 USER_FIELDS = "created_at,description,entities,location,name,profile_image_url,public_metrics,url,username"
+
 r = stream_tweets(QUERY, EXPANSIONS, TWEET_FIELDS, USER_FIELDS)
