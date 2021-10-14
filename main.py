@@ -15,7 +15,7 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
 
     datetimestart = datetime
     try:
-        o = TwitterOAuth.read_file()
+        o = TwitterOAuth.read_file("credentials.txt")
         api = TwitterAPI(
             o.consumer_key,
             o.consumer_secret,
