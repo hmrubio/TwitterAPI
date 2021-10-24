@@ -37,10 +37,12 @@ def consultas_por_fechahora():
             if cantidad_tuits <= 0: raise ValueError 
             break
         except ValueError: print("Ingrese cantidad de tuits vàlido...")
+        
     print("\nFechas (dd/mm/aaaa - dd/mm/aaaa):")
     while True:
         try: fechas = [datetime.strptime(x.strip(), '%d/%m/%Y') for x in input().split("-")]; break
         except ValueError: print("Una de las dos fechas no es correcta. Pruebe otra vez...")
+        
     print("\nHorarios (00:00 - 23:59:")
     while True:
         try: fechas = [datetime.strptime(x.strip(), '%H:%M') for x in input().split("-")]; break
