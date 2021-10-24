@@ -78,7 +78,7 @@ def consultas_por_palabras():
         text = input()
         query = text.split(" ") if len(text) > 0 else text
         if (len(query) != 0): break
-        print("Debe ingresar una consulta")
+        print("Debe ingresar una consulta...")
 
 def procesar_archivo(*args):
     with open("data.json", "r", encoding = "utf-8") as file:
