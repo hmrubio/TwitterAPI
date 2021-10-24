@@ -1,5 +1,6 @@
 
 from datetime import *
+import json
 
 def search_engine():
     print("\nBuscador de información recopilada...\
@@ -36,19 +37,27 @@ def consultas_por_fechahora():
             cantidad_tuits = int(input())
             if cantidad_tuits <= 0: raise ValueError 
             break
-        except ValueError: print("Ingrese cantidad de tuits vàlido...")
+        except ValueError: print("Ingrese cantidad de tuits válido...")
         
     print("\nFechas (dd/mm/aaaa - dd/mm/aaaa):")
     while True:
-        try: fechas = [datetime.strptime(x.strip(), '%d/%m/%Y') for x in input().split("-")]; break
+        try: list_fechas = [datetime.strptime(x.strip(), '%d/%m/%Y') for x in input().split("-")]; break
         except ValueError: print("Una de las dos fechas no es correcta. Pruebe otra vez...")
         
     print("\nHorarios (00:00 - 23:59:")
     while True:
-        try: fechas = [datetime.strptime(x.strip(), '%H:%M') for x in input().split("-")]; break
+        try: list_horas = [datetime.strptime(x.strip(), '%H:%M') for x in input().split("-")]; break
         except ValueError: print("Una de las dos horas no es correcta. Pruebe otra vez...")
         
     print("\nProcesando...")
+    procesar_archivo(nombre_usuario, cantidad_tuits, list_fechas, list_horas)
 
-search_engine()
+def procesar_archivo(*args):
+    with open("data.json", "r", encoding = "utf-8") as file:
+        for i in file:
+            objeto = json.loads(i)
+            print(objeto)
+
+procesar_archivo()
+# search_engine()
 
