@@ -1,6 +1,8 @@
-
+import datetime
 from datetime import *
 import json
+from BTrees.OOBTree import OOBTree
+
 from _ast import Break
 
 def search_engine():
@@ -45,18 +47,25 @@ def consultas_por_fechahora():
             break
         except ValueError: print("Ingrese cantidad de tuits válido...")
         
-    print("\nFechas (dd/mm/aaaa - dd/mm/aaaa):")
+    print("\nFecha desde (dd/mm/aaaa hh:mm):")
     while True:
-        try: list_fechas = [datetime.strptime(x.strip(), '%d/%m/%Y') for x in input().split("-")]; break
-        except ValueError: print("Una de las dos fechas no es correcta. Pruebe otra vez...")
-        
-    print("\nHorarios (00:00 - 23:59:")
+        try:
+            fecha_desde = input()
+            fecha_desde = datetime.strptime(fecha_desde, '%d/%m/%Y %H:%M') if fecha_desde else datetime.min; break
+        except ValueError:
+            print("Formato incorrecto en la fecha. Pruebe otra vez...")
+
+    print("\nFecha hasta (dd/mm/aaaa hh:mm):")
     while True:
-        try: list_horas = [datetime.strptime(x.strip(), '%H:%M') for x in input().split("-")]; break
-        except ValueError: print("Una de las dos horas no es correcta. Pruebe otra vez...")
-        
+        try:
+            fecha_hasta = input()
+            fecha_hasta = datetime.strptime(fecha_hasta, '%d/%m/%Y %H:%M') if fecha_hasta else datetime.max;
+            break
+        except ValueError:
+            print("Formato incorrecto en la fecha. Pruebe otra vez...")
+
     print("\nProcesando...")
-    procesar_archivo(nombre_usuario, cantidad_tuits, list_fechas, list_horas)
+    __obtener_tweets_por_fecha(nombre_usuario,cantidad_tuits,fecha_desde, fecha_hasta)
 
 def consultas_por_palabras():
     print("\nIngrese los siguientes datos por favor...\
@@ -86,6 +95,61 @@ def procesar_archivo(*args):
             objeto = json.loads(i)
             print(objeto)
 
+def __generar_indice_usuarios():
+    pares = []
+    numero_tweet = 0
+    indice = OOBTree()
+
+    with open("data.json", "r", encoding = "utf-8") as file:
+        for tweet in file:
+            try:
+                pares.append((json.loads(tweet)["data"]["author_id_hydrate"]["username"], numero_tweet))
+            except KeyError:
+                print(f"Tweet arrojó un OperationalDisconnect al intentar capturar el tweet número: {numero_tweet} ")
+            finally:
+                numero_tweet += 1
+    for par in pares:
+        posting = indice.setdefault(par[0], set())
+        posting.add(par[1])
+    return indice
+
+def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta):
+        if(usuario):
+            if not(indice_usuarios.has_key(usuario)):
+                return
+            tweets_de_este_usuario = list(indice_usuarios[usuario])
+            with open("data.json", "r", encoding="utf-8") as file:
+                numero_tweet_actual = 0
+                tweet = next(file, None)
+                while(tweet and len(tweets_de_este_usuario) > 0 and cantidad_a_imprimir > 0):
+
+                    if numero_tweet_actual in tweets_de_este_usuario:
+                        tweet = json.loads(tweet)
+                        fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
+                        if(fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
+                            print("Tweet:")
+                            print(tweet["data"]["text"], "\n")
+                            cantidad_a_imprimir -= 1
+                    numero_tweet_actual += 1
+                    tweet = next(file, None)
+        else:
+            with open("data.json", "r", encoding="utf-8") as file:
+                tweet = next(file, None)
+                while(tweet and cantidad_a_imprimir > 0):
+                    try:
+                        tweet = json.loads(tweet)
+                        fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
+                        if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
+                            print("Tweet:")
+                            print(tweet["data"]["text"],"\n")
+                            cantidad_a_imprimir -= 1
+                    except KeyError:
+                        pass
+                    finally:
+                        tweet = next(file, None)
+
+indice_usuarios = __generar_indice_usuarios()
 #procesar_archivo()
-search_engine()
+while True:
+    search_engine()
 
