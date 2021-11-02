@@ -4,6 +4,12 @@ import json
 import os
 import string
 import time
+import re
+
+"""Anotaciones:
+_Hay que cambiar el sistema de intercalado de bloques invertidos.
+_No hay que lematizar.
+"""
 
 class CreacionDeBloques:
     def __init__(self, documento, salida, temp="./temp", language='spanish'):
@@ -73,34 +79,36 @@ class CreacionDeBloques:
         open_files = [open(f, "r") for f in temp_files]
 
         with open(posting_file,"w+") as salida:
-            """for termID in lista_termID:
+            for termID in lista_termID:
                 posting=set()
                 for data in open_files:
                     data.seek(0)
                     bloque = json.load(data)
+                    print("Json Recargado")
                     try:
                         posting = posting.union(set(bloque[termID]))
                     except:
                         pass
                 json.dump(list(posting), salida, indent=None)
                 salida.write("\n")
-            """
+            
             # Mal porque por cada término abre y cierra cada uno de los b.json de ./temp
 
-            lista = {}
+            """lista = {}
             for data in open_files:
                 bloque = json.load(data)
                 for termID in lista_termID:
                     posting = lista.setdefault(termID, set())
                     posting.union(set(bloque[termID]))
+            """
             # Mal porque carga todo el índice invertido en memoria.
-
-            print()
     
     def __guardar_diccionario_terminos(self):
         path = os.path.join(self.salida, "diccionario_terminos.json")
         with open(path, "w") as contenedor:
-            json.dump(self._term_to_termID, contenedor)
+            for term, termID in self._term_to_termID.items():
+                json.dump((term, termID), contenedor)
+                contenedor.write("\n")
     
     def __parse_next_block(self):
         n = self._blocksize #espacio libre en el bloque actual
@@ -113,7 +121,7 @@ class CreacionDeBloques:
                 palabras = json.loads(tweet)['data']['text'].split() # va palabra por palabra del tweet
                 for pal in palabras:
                     if pal not in self._stop_words:
-                        pal = self.__lematizar(pal)
+                        # pal = self.__lematizar(pal)
                         if pal not in self._term_to_termID:
                             self._term_to_termID[pal] = termID
                             termID += 1
@@ -125,5 +133,37 @@ class CreacionDeBloques:
                     bloque = []
             yield bloque
 
+    @staticmethod
+    def _buscar_palabra(palabra):
+        with open("./salida/diccionario_terminos.json", "r") as contenedor:
+            linea = next(contenedor, False)
+            while (linea):
+                linea = json.loads(linea)
+                if (linea[0] == palabra): break
+                else: linea = next(contenedor, False)
+
+        conjunto = set()
+        if (linea):
+            with open("./salida/postings.json", "r") as contenedor:
+                for i in range(0, linea[1]):
+                    next(contenedor)
+                conjunto.update(json.loads(next(contenedor)))
+
+        return conjunto;
+
+    @staticmethod
+    def buscar_palabras(query, cantidad_tweets):
+        matches = re.findall(r'\(([^()]+)\)', query)
+        if matches:
+            for i in matches: CreacionDeBloques.buscar_palabras(i, cantidad_tweets)
+        
+        lista = re.findall(r'\"(?:[^\"]+)\"|and not|and|not|or', query)
+        
+        print()
+
 if ("__main__" == __name__):
-    indice = CreacionDeBloques("data.json", "./salida")
+    #indice = CreacionDeBloques("data.json", "./salida")
+
+    conjunto = CreacionDeBloques._buscar_palabra("global")
+    algo = CreacionDeBloques.buscar_palabras('"Del Potro" and ("Murray" and not "Copa Davis") and "Persona"', 10)
+    print(conjunto)
