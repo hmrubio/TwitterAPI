@@ -8,7 +8,6 @@ import re
 
 """Anotaciones:
 _Hay que cambiar el sistema de intercalado de bloques invertidos.
-_No hay que lematizar.
 """
 
 class CreacionDeBloques:
@@ -135,6 +134,7 @@ class CreacionDeBloques:
 
     @staticmethod
     def _buscar_palabra(palabra):
+        palabra = palabra.strip("")
         with open("./salida/diccionario_terminos.json", "r") as contenedor:
             linea = next(contenedor, False)
             while (linea):
@@ -149,10 +149,11 @@ class CreacionDeBloques:
                     next(contenedor)
                 conjunto.update(json.loads(next(contenedor)))
 
-        return conjunto;
+        return conjunto
 
     @staticmethod
     def buscar_palabras(query, cantidad_tweets):
+        """
         matches = re.findall(r'\(([^()]+)\)', query)
         if matches:
             for i in matches: CreacionDeBloques.buscar_palabras(i, cantidad_tweets)
@@ -160,10 +161,37 @@ class CreacionDeBloques:
         lista = re.findall(r'\"(?:[^\"]+)\"|and not|and|not|or', query)
         
         print()
+        """
+
+        matches = re.findall(r'\([^()]+\)|\"(?:[^\"]+)\"|and not|and|not|or', query)
+
+        print(matches)
+
+        out = set()
+        for i in range(0, len(matches), 2):
+            if matches[i][0] == "(":
+                conjunto = CreacionDeBloques.buscar_palabras(matches[i].strip("()"), cantidad_tweets)
+            elif (type(matches[i]) != type(set)):
+                conjunto = CreacionDeBloques._buscar_palabra(matches[i])
+            
+            if ((i-1) > 0): operador = matches[i-1]
+            elif (i == 0): operador = "and"
+            else: operador = ""
+
+            if (operador == "and"):
+                out.intersection_update(conjunto)
+            elif (operador == "or"):
+                out.update(conjunto)
+            elif (operador == "and not"):
+                out.intersection_update(conjunto)
+
+        return out
+        
+
 
 if ("__main__" == __name__):
-    #indice = CreacionDeBloques("data.json", "./salida")
+    indice = CreacionDeBloques("data.json", "./salida")
 
-    conjunto = CreacionDeBloques._buscar_palabra("global")
-    algo = CreacionDeBloques.buscar_palabras('"Del Potro" and ("Murray" and not "Copa Davis") and "Persona"', 10)
-    print(conjunto)
+    #conjunto = CreacionDeBloques._buscar_palabra("reserv")
+    algo = CreacionDeBloques.buscar_palabras('"Del Potro" or ("Murray" and not "Copa Davis") or "Persona"', 10)
+    #print(conjunto)
