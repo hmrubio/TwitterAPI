@@ -5,6 +5,9 @@ from BTrees.OOBTree import OOBTree
 
 from _ast import Break
 
+import DiccionarioBloquesInvertido
+
+
 def search_engine():
     print("\nBuscador de información recopilada...\
     \nIngrese la opción que desea utilizar.\
@@ -95,43 +98,10 @@ def procesar_archivo(*args):
             objeto = json.loads(i)
             print(objeto)
 
-def __generar_indice_usuarios():
-    pares = []
-    numero_tweet = 0
-    indice = OOBTree()
-
-    with open("data.json", "r", encoding = "utf-8") as file:
-        for tweet in file:
-            try:
-                pares.append((json.loads(tweet)["data"]["author_id_hydrate"]["username"], numero_tweet))
-            except KeyError:
-                print(f"Tweet arrojó un OperationalDisconnect al intentar capturar el tweet número: {numero_tweet} ")
-            finally:
-                numero_tweet += 1
-    for par in pares:
-        posting = indice.setdefault(par[0], set())
-        posting.add(par[1])
-    return indice
-
 def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta):
         if(usuario):
-            if not(indice_usuarios.has_key(usuario)):
-                return
-            tweets_de_este_usuario = list(indice_usuarios[usuario])
-            with open("data.json", "r", encoding="utf-8") as file:
-                numero_tweet_actual = 0
-                tweet = next(file, None)
-                while(tweet and len(tweets_de_este_usuario) > 0 and cantidad_a_imprimir > 0):
-
-                    if numero_tweet_actual in tweets_de_este_usuario:
-                        tweet = json.loads(tweet)
-                        fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
-                        if(fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
-                            print("Tweet:")
-                            print(tweet["data"]["text"], "\n")
-                            cantidad_a_imprimir -= 1
-                    numero_tweet_actual += 1
-                    tweet = next(file, None)
+            #Busqueda por usuario
+            imprimir_tweets_por_usuario(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta)
         else:
             with open("data.json", "r", encoding="utf-8") as file:
                 tweet = next(file, None)
@@ -147,8 +117,46 @@ def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_
                         pass
                     finally:
                         tweet = next(file, None)
+def _buscar_usuario(palabra):
+    palabra = palabra.strip("")
+    with open("output/diccionario_usuarios.json", "r") as contenedor:
+        linea = next(contenedor, False)
+        while (linea):
+            linea = json.loads(linea)
+            if (linea[0] == palabra):
+                break
+            else:
+                linea = next(contenedor, False)
 
-indice_usuarios = __generar_indice_usuarios()
+    conjunto = set()
+    if (linea):
+        with open("output/user_postings.json", "r") as contenedor:
+            for i in range(1, linea[1]):
+                next(contenedor)
+            conjunto.update(json.loads(next(contenedor)))
+    return conjunto
+
+def imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_desde, fecha_hasta):
+    tweets_de_este_usuario = [1]
+    tweets_de_este_usuario.extend(sorted(_buscar_usuario(usuario)))
+    tweet_de_este_usuario_recorridos = 1
+    if len(tweets_de_este_usuario) == 1:
+        return
+    with open("data.json", "r", encoding="utf-8") as file:
+        while (tweet_de_este_usuario_recorridos < len(tweets_de_este_usuario) and cantidad_restante_a_imprimir > 0):
+            #Avanzar hasta la linea correspondiente
+            for x in range(tweets_de_este_usuario[tweet_de_este_usuario_recorridos-1], tweets_de_este_usuario[tweet_de_este_usuario_recorridos]):
+                next(file, None)
+
+            # Compruebo que el tweet esté entre el rango de fechas
+            tweet = json.loads(next(file, None))
+            fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
+            if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
+                print("Tweet:")
+                print(tweet["data"]["text"], "\n")
+                cantidad_restante_a_imprimir -= 1
+            tweet_de_este_usuario_recorridos += 1
+
 #procesar_archivo()
 while True:
     search_engine()

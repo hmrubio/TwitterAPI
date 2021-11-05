@@ -1,3 +1,5 @@
+import datetime
+
 from nltk.stem import SnowballStemmer  # Stemmer
 from nltk.corpus import stopwords  # Stopwords
 import json
@@ -22,6 +24,7 @@ class CreacionDeBloques:
         self._stop_words = frozenset(stopwords.words(language))  # lista de stop words
         self._stemmer = SnowballStemmer(language, ignore_stopwords=False)
         self._term_to_termID = {}
+        self._user_to_userID = {}
 
         self.__indexar()
 
@@ -41,18 +44,26 @@ class CreacionDeBloques:
 
     def __indexar(self):
         n = 0
-        lista_bloques = []
-        for bloque in self.__parse_next_block():
-            bloque_invertido = self.__invertir_bloque(
-                bloque)  # ahora cada bloque tine cada palabra con todos los tweets de esa palabra
-            lista_bloques.append(self.__guardar_bloque_intermedio(bloque_invertido, n))
+        lista_bloques_palabras = []
+        lista_bloques_usuarios= []
+        for bloque_palabras,bloque_usuarios in self.__parse_next_block():
+            bloque_invertido_palabras = self.__invertir_bloque(
+                bloque_palabras)            # ahora cada bloque tine cada palabra con todos los tweets de esa palabra
+
+            bloque_invertido_usuarios = self.__invertir_bloque(
+                bloque_usuarios)            # ahora cada bloque tine cada usuario con todos los tweets de esa usuario
+
+            lista_bloques_palabras.append(self.__guardar_bloque_intermedio(bloque_invertido_palabras, n))
+            lista_bloques_usuarios.append(self.__guardar_bloque_intermedio(bloque_invertido_usuarios, f"u{n}"))
             n += 1
         start = time.process_time()
-        self.__intercalar_bloques(lista_bloques)
+        self.__intercalar_bloques(lista_bloques_palabras, self._term_to_termID, "postings")
+        self.__intercalar_bloques(lista_bloques_usuarios,self._user_to_userID,"user_postings")
         end = time.process_time()
         print("Intercalar Bloques Elapsed time: ", end - start)
 
-        self.__guardar_diccionario_terminos()
+        self.__guardar_diccionario_terminos(self._term_to_termID, "terminos")
+        self.__guardar_diccionario_terminos(self._user_to_userID, "usuarios")
 
     def __invertir_bloque(self, bloque):
         bloque_invertido = {}
@@ -71,13 +82,13 @@ class CreacionDeBloques:
             json.dump(bloque, contenedor)
         return archivo_salida
 
-    def __intercalar_bloques(self, temp_files):
+    def __intercalar_bloques(self, temp_files, term_to_termID, nombre_archivo_salida):
 
-        lista_termID = [str(i) for i in range(len(self._term_to_termID))]
+        lista_termID = [str(value) for value in term_to_termID.values()]
         iter_lista = iter(lista_termID)
         cantidad_term_group = len(lista_termID) // 1000 + 1
 
-        posting_file = os.path.join(self.salida, "postings.json")
+        posting_file = os.path.join(self.salida, f"{nombre_archivo_salida}.json")
         open_files = [open(f, "r") for f in temp_files]
 
         with open(posting_file, "w+") as salida:
@@ -127,22 +138,25 @@ class CreacionDeBloques:
                     posting = lista.setdefault(termID, set())
                     posting.union(set(bloque[termID]))
         """""
-
-    def __guardar_diccionario_terminos(self):
-        path = os.path.join(self.salida, "diccionario_terminos.json")
+    def __guardar_diccionario_terminos(self, term_to_termID, nombre_archivo_diccionario):
+        path = os.path.join(self.salida, f"diccionario_{nombre_archivo_diccionario}.json")
         with open(path, "w") as contenedor:
-            for term, termID in self._term_to_termID.items():
+            for term, termID in term_to_termID.items():
                 json.dump((term, termID), contenedor)
                 contenedor.write("\n")
 
     def __parse_next_block(self):
         n = self._blocksize  # espacio libre en el bloque actual
-        termID = 0  # inicializamos el diccionario de términos
-        bloque = []  # lista de pares (termID, tweetID)
+        termID = 1  # inicializamos el diccionario de términos
+        userID = 1  # inicializamos el diccionario de términos
+        bloque_palabras = []  # lista de pares (termID, tweetID)
+        bloque_usuarios = []
+
         tweetID = 1  # ID de cada tweet, se puede acceder directament desde el json
         with open(self.documento, encoding="utf-8") as file:
             for tweet in file:
                 n -= 1
+                #Recorro las palabras
                 palabras = json.loads(tweet)['data']['text'].split()  # va palabra por palabra del tweet
                 for pal in palabras:
                     if pal not in self._stop_words:
@@ -150,13 +164,23 @@ class CreacionDeBloques:
                         if pal not in self._term_to_termID:
                             self._term_to_termID[pal] = termID
                             termID += 1
-                        bloque.append((self._term_to_termID[pal], tweetID))
+                        bloque_palabras.append((self._term_to_termID[pal], tweetID))
+
+                #Recorro los usuarios
+                usuario = json.loads(tweet)["data"]["author_id_hydrate"]["username"]
+                if usuario not in self._user_to_userID:
+                    self._user_to_userID[usuario] = userID
+                    userID += 1
+                bloque_usuarios.append((self._user_to_userID[usuario], tweetID))
+
+
                 tweetID += 1
                 if n <= 0:
-                    yield bloque
+                    yield(bloque_palabras,bloque_usuarios)
                     n = self._blocksize
-                    bloque = []
-            yield bloque
+                    bloque_palabras = []
+                    bloque_usuarios = []
+            yield(bloque_palabras,bloque_usuarios)
 
     @staticmethod
     def _buscar_palabra(self, palabra):
