@@ -121,7 +121,7 @@ class CreacionDeBloques:
         bloque_palabras = []  # lista de pares (termID, tweetID)
         bloque_usuarios = []
 
-        tweetID = 0  # ID de cada tweet, se puede acceder directament desde el json
+        tweetID = 1  # ID de cada tweet, se puede acceder directament desde el json
         with open(self.documento, encoding="utf-8") as file:
             for tweet in file:
                 n -= 1

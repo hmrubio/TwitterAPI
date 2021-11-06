@@ -15,11 +15,10 @@ from diccionario_bloque_invertido import CreacionDeBloques
 
 class BuscarTweets():
     def __init__(self):
-        QUERY = "cambio climático OR sequías OR calentamiento global OR economía circular OR espacios verde OR protección ambiental lang:es -is:retweet"
-        EXPANSIONS = "author_id,referenced_tweets.id,referenced_tweets.id.author_id,in_reply_to_user_id,attachments.media_keys,attachments.poll_ids,geo.place_id,entities.mentions.username"
-        TWEET_FIELDS = "author_id,conversation_id,created_at,entities,geo,id,lang,public_metrics,source,text"
-        USER_FIELDS = "created_at,description,entities,location,name,profile_image_url,public_metrics,url,username"
-
+        QUERY = "cambio climático OR sequías OR calentamiento global OR economía circular OR espacios verde OR protección ambiental"
+        EXPANSIONS = "author_id"
+        TWEET_FIELDS = "created_at,text"
+        USER_FIELDS = ""
         self.stream_tweets(QUERY, EXPANSIONS, TWEET_FIELDS, USER_FIELDS)
 
     def stream_tweets(self, query, expansions, tweet_fields, user_fields):
@@ -101,7 +100,7 @@ class BuscarTweets():
             print("Duración de la prueba " + (str(datetimeend)) + " horas/minutos/segundos")
             print("------------------------------------------------------------")
             print("Creando índice...")
-            CreacionDeBloques("data.json", "./salida")
+            CreacionDeBloques("data.json", "./output")
             print("Índice creado con éxito.")
 
         except TwitterRequestError as e:

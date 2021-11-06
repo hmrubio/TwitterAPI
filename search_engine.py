@@ -1,7 +1,6 @@
 import datetime
 from datetime import *
 import json
-from queue import PriorityQueue
 import re
 import os
 import glob
@@ -33,7 +32,7 @@ def search_engine():
 
         elif (opcion_elegida == 3): buscar_tweets.BuscarTweets(); break
 
-        elif (opcion_elegida == 4): ordenar_tweets(); break
+        elif (opcion_elegida == 4): agrupar_tweets(); break
             
         elif (opcion_elegida == 5): break
             
@@ -77,7 +76,7 @@ def consultas_por_fechahora():
             print("Formato incorrecto en la fecha. Pruebe otra vez...")
 
     print("\nProcesando...")
-    __obtener_tweets_por_fecha(nombre_usuario,cantidad_tuits,fecha_desde, fecha_hasta)
+    _obtener_tweets_por_fecha(nombre_usuario, cantidad_tuits, fecha_desde, fecha_hasta)
 
 def consultas_por_palabras():
     print("\nIngrese los siguientes datos por favor...\
@@ -103,28 +102,87 @@ def consultas_por_palabras():
     print("\n------------------------------------------------------------------------")
     ejecutar_query(query, cantidad_tuits)
 
-def ordenar_tweets():
-    files = glob.glob("./ordenar/*")
+def agrupar_tweets():
+    print("\nIngrese los siguientes datos por favor...\
+    \
+    \ni.\tNombre del primer archivo (con la extension .json)\
+    \nii.\tNombre del segundo archivo (con la extension .json)\
+    \niii.\tNombre del archivo resultante (con la extension .json)")
 
-    queue = PriorityQueue()
-
-    with open("data.json.bak", "w+") as new_file:
+    print("\nPrimer archivo: ")
+    while True:
         try:
-            for line in fileinput.input(files[1]):
-                line = json.loads(line)
-                fecha_creacion = datetime.strptime(line["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
-                queue.put(line, fecha_creacion)
-        except UnicodeDecodeError:
-            pass
-        
-        while (queue.not_empty):
-            json.dump(queue.get(), new_file)
-            
+            primer_archivo = input()
+            if len(primer_archivo) <= 0 or not primer_archivo.endswith(".json"): raise ValueError
+            break
+        except ValueError:
+            print("El nombre debe contener la extension .json...")
 
-def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta):
+    print("\nSegundo archivo: ")
+    while True:
+        try:
+            segundo_archivo = input()
+            if len(segundo_archivo) <= 0 or not segundo_archivo.endswith(".json"): raise ValueError
+            break
+        except ValueError:
+            print("El nombre debe contener la extension .json...")
+
+    print("\nArchivo resultante: ")
+    while True:
+        try:
+            tercer_archivo = input()
+            if len(tercer_archivo) <= 0 or not tercer_archivo.endswith(".json"): raise ValueError
+            break
+        except ValueError:
+            print("El nombre debe contener la extension .json...")
+    print("\nProcesando...")
+    agrupar_tweets_ordenados(primer_archivo,segundo_archivo, tercer_archivo)
+
+def agrupar_tweets_ordenados(file1, file2, salida):
+
+    if not(os.path.exists(file1) and os.path.exists(file2)):
+        print("Los archivos no existen")
+        return
+    with open(file1, "r", encoding="utf-8") as archivo_tweets1, open(file2, "r", encoding="utf-8") as archivo_tweets2, open(salida, "w", encoding="utf-8") as conjunto_tweets:
+
+        tweet_archivo1, fecha_tweet1 = _obtener_tweet_y_fecha(archivo_tweets1)
+        tweet_archivo2, fecha_tweet2 = _obtener_tweet_y_fecha(archivo_tweets2)
+
+        while(tweet_archivo1 or tweet_archivo2):
+                if(not fecha_tweet1):
+                    json.dump(tweet_archivo2, conjunto_tweets,ensure_ascii=False, indent=None)
+                    tweet_archivo2, fecha_tweet2 = _obtener_tweet_y_fecha(archivo_tweets2)
+
+                elif(not fecha_tweet2):
+                    json.dump(tweet_archivo1, conjunto_tweets,ensure_ascii=False, indent=None)
+                    tweet_archivo1, fecha_tweet1 = _obtener_tweet_y_fecha(archivo_tweets1)
+
+                elif(fecha_tweet1 < fecha_tweet2):
+                    json.dump(tweet_archivo1, conjunto_tweets,ensure_ascii=False, indent=None)
+                    tweet_archivo1, fecha_tweet1 = _obtener_tweet_y_fecha(archivo_tweets1)
+
+                else:
+                    json.dump(tweet_archivo2, conjunto_tweets,ensure_ascii=False, indent=None)
+                    tweet_archivo2, fecha_tweet2 = _obtener_tweet_y_fecha(archivo_tweets2)
+                conjunto_tweets.write("\n")
+
+def _obtener_tweet_y_fecha(archivo_tweet):
+    tweet = next(archivo_tweet, None)
+    fecha = None
+    while(tweet and not fecha):
+        try:
+            tweet = json.loads(tweet)
+            fecha = datetime.strptime(tweet["data"]["created_at"],
+                                     '%Y-%m-%dT%H:%M:%S.%fZ')
+        except KeyError:
+            print("KeyError")
+            tweet = next(archivo_tweet, None)
+    return(tweet, fecha)
+
+def _obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta):
         if(usuario):
             #Busqueda por usuario
-            imprimir_tweets_por_usuario(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta)
+            _imprimir_tweets_por_usuario(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta)
         else:
             with open("data.json", "r", encoding="utf-8") as file:
                 tweet = next(file, None)
@@ -135,6 +193,10 @@ def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_
                         if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
                             print("Tweet:")
                             print(tweet["data"]["text"],"\n")
+                            print("Usuario:")
+                            print(tweet["data"]["author_id_hydrate"]["username"])
+                            print("Fecha:")
+                            print(tweet["data"]["created_at"], "\n")
                             cantidad_a_imprimir -= 1
                     except KeyError:
                         pass
@@ -160,8 +222,8 @@ def _buscar_usuario(palabra):
             conjunto.update(json.loads(next(contenedor)))
     return conjunto
 
-def imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_desde, fecha_hasta):
-    tweets_de_este_usuario = [1]
+def _imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_desde, fecha_hasta):
+    tweets_de_este_usuario = [0]
     tweets_de_este_usuario.extend(sorted(_buscar_usuario(usuario)))
     tweet_de_este_usuario_recorridos = 1
     if len(tweets_de_este_usuario) == 1:
@@ -169,7 +231,7 @@ def imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_des
     with open("data.json", "r", encoding="utf-8") as file:
         while (tweet_de_este_usuario_recorridos < len(tweets_de_este_usuario) and cantidad_restante_a_imprimir > 0):
             #Avanzar hasta la linea correspondiente
-            for x in range(tweets_de_este_usuario[tweet_de_este_usuario_recorridos-1], tweets_de_este_usuario[tweet_de_este_usuario_recorridos]):
+            for x in range(tweets_de_este_usuario[tweet_de_este_usuario_recorridos-1]+1, tweets_de_este_usuario[tweet_de_este_usuario_recorridos]):
                 next(file, None)
 
             # Compruebo que el tweet esté entre el rango de fechas
@@ -177,7 +239,11 @@ def imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_des
             fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
             if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
                 print("Tweet:")
-                print(tweet["data"]["text"], "\n")
+                print(tweet["data"]["text"])
+                print("Usuario:")
+                print(tweet["data"]["author_id_hydrate"]["username"])
+                print("Fecha:")
+                print(tweet["data"]["created_at"],"\n")
                 cantidad_restante_a_imprimir -= 1
             tweet_de_este_usuario_recorridos += 1
 
@@ -189,7 +255,7 @@ def _lematizar(palabra):
 
 def _buscar_palabra(palabra):
     palabra = _lematizar(palabra.strip('"'))
-    with open("./salida/diccionario_terminos.json", "r") as contenedor:
+    with open("./output/diccionario_terminos.json", "r") as contenedor:
         linea = next(contenedor, False)
         while (linea):
             linea = json.loads(linea)
@@ -200,7 +266,7 @@ def _buscar_palabra(palabra):
 
     conjunto = set()
     if (linea):
-        with open("./salida/postings.json", "r") as contenedor:
+        with open("./output/postings.json", "r") as contenedor:
             for i in range(1, linea[1]):
                 valor = next(contenedor)
             conjunto.update(json.loads(next(contenedor)))
@@ -253,9 +319,10 @@ def ejecutar_query(query, cantidad_tweets):
         #     i += 1
 
         lines_swifted = 0
+        # print(len(lista))
         while (cantidad_tweets > 0
             and len(lista) > 0):
-            posicion = lista.pop(0) + 1
+            posicion = lista.pop(0)
             while (lines_swifted < posicion): # Tweet encontrado
                 line = next(file)
                 lines_swifted += 1
@@ -265,7 +332,6 @@ def ejecutar_query(query, cantidad_tweets):
             print()
             print(text, '\n')
             print("------------------------------------------------------------------------")
-
 if (__name__ == "__main__"):
     while True:
         search_engine()
