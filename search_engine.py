@@ -1,12 +1,15 @@
 import datetime
 from datetime import *
 import json
-from BTrees.OOBTree import OOBTree
-
-from _ast import Break
-
-import DiccionarioBloquesInvertido
-
+from queue import PriorityQueue
+import re
+import os
+import glob
+import string
+import fileinput
+from nltk.stem.snowball import SnowballStemmer
+import diccionario_bloque_invertido
+import buscar_tweets
 
 def search_engine():
     print("\nBuscador de información recopilada...\
@@ -14,7 +17,9 @@ def search_engine():
     \
     \n1.\tConsultas por fecha y hora.\
     \n2.\tConsultas de palabras o frases.\
-    \n3.\tFinalizar.\
+    \n3.\tBuscar más tweets.\
+    \n4.\tOrdenar tweets.\
+    \n5.\tFinalizar.\
     \
     \n\nOpción número: ")
     
@@ -25,8 +30,12 @@ def search_engine():
         if (opcion_elegida == 1): consultas_por_fechahora(); break
         
         elif (opcion_elegida == 2): consultas_por_palabras(); break
+
+        elif (opcion_elegida == 3): buscar_tweets.BuscarTweets(); break
+
+        elif (opcion_elegida == 4): ordenar_tweets(); break
             
-        elif (opcion_elegida == 3): break
+        elif (opcion_elegida == 5): break
             
         else: print("Opción incorrecta. Ingrese nuevamente...")
 
@@ -86,17 +95,31 @@ def consultas_por_palabras():
         except ValueError: print("Ingrese cantidad de tuits válido...")
     
     print("\nIngrese su consulta (operadores permitidos OR, AND, NOT)...")
-    while True:    
-        text = input()
-        query = text.split(" ") if len(text) > 0 else text
+    while True: 
+        query = input()
         if (len(query) != 0): break
         print("Debe ingresar una consulta...")
+    
+    print("\n------------------------------------------------------------------------")
+    ejecutar_query(query, cantidad_tuits)
 
-def procesar_archivo(*args):
-    with open("data.json", "r", encoding = "utf-8") as file:
-        for i in file:
-            objeto = json.loads(i)
-            print(objeto)
+def ordenar_tweets():
+    files = glob.glob("./ordenar/*")
+
+    queue = PriorityQueue()
+
+    with open("data.json.bak", "w+") as new_file:
+        try:
+            for line in fileinput.input(files[1]):
+                line = json.loads(line)
+                fecha_creacion = datetime.strptime(line["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
+                queue.put(line, fecha_creacion)
+        except UnicodeDecodeError:
+            pass
+        
+        while (queue.not_empty):
+            json.dump(queue.get(), new_file)
+            
 
 def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta):
         if(usuario):
@@ -117,6 +140,7 @@ def __obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_
                         pass
                     finally:
                         tweet = next(file, None)
+                        
 def _buscar_usuario(palabra):
     palabra = palabra.strip("")
     with open("output/diccionario_usuarios.json", "r") as contenedor:
@@ -157,7 +181,92 @@ def imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_des
                 cantidad_restante_a_imprimir -= 1
             tweet_de_este_usuario_recorridos += 1
 
-#procesar_archivo()
-while True:
-    search_engine()
+def _lematizar(palabra):
+    palabra = palabra.strip(string.punctuation + "»" + "\x97" + "¿" + "¡" + "\u201c" + \
+                                "\u201d" + "\u2014" + "\u2014l" + "\u00bf")
+    palabra_lematizada = SnowballStemmer("spanish", ignore_stopwords=False).stem(palabra)
+    return palabra_lematizada
+
+def _buscar_palabra(palabra):
+    palabra = _lematizar(palabra.strip('"'))
+    with open("./salida/diccionario_terminos.json", "r") as contenedor:
+        linea = next(contenedor, False)
+        while (linea):
+            linea = json.loads(linea)
+            if (linea[0] == palabra):
+                break
+            else:
+                linea = next(contenedor, False)
+
+    conjunto = set()
+    if (linea):
+        with open("./salida/postings.json", "r") as contenedor:
+            for i in range(1, linea[1]):
+                valor = next(contenedor)
+            conjunto.update(json.loads(next(contenedor)))
+
+    return conjunto
+
+def _buscar_palabras(query):
+    matches = re.findall(r'\([^()]+\)|\"(?:[^\"]+)\"|and not|and|not|or', query)
+    #print(matches)
+
+    out = set()
+    for i in range(0, len(matches), 2):
+        if matches[i][0] == "(":
+            conjunto = _buscar_palabras(matches[i].strip("()"))
+        elif (type(matches[i]) != type(set)):
+            conjunto = _buscar_palabra(matches[i])
+
+        if ((i - 1) > 0):
+            operador = matches[i - 1]
+        elif (i == 0):
+            out.update(conjunto)
+            operador = ""
+        else:
+            operador = ""
+
+        if (operador == "and"):
+            out.intersection_update(conjunto)
+        elif (operador == "or"):
+            out.update(conjunto)
+        elif (operador == "and not"):
+            out.difference_update(conjunto)
+
+    return out
+
+def ejecutar_query(query, cantidad_tweets):
+    lista = list(_buscar_palabras(query))
+    lista.sort()
+    
+    with open("data.json", encoding="utf-8") as file:
+        # i = 0
+
+        # for tweet_number in conjunto:
+        #     tweet = file.readlines()[tweet_number]
+        #     file.seek(0)
+        #     text = json.loads(tweet)['data']['text']
+        #     print(text, '\n')
+
+        #     if i >= 15:
+        #         break
+        #     i += 1
+
+        lines_swifted = 0
+        while (cantidad_tweets > 0
+            and len(lista) > 0):
+            posicion = lista.pop(0) + 1
+            while (lines_swifted < posicion): # Tweet encontrado
+                line = next(file)
+                lines_swifted += 1
+
+            cantidad_tweets -= 1
+            text = json.loads(line)['data']['text']
+            print()
+            print(text, '\n')
+            print("------------------------------------------------------------------------")
+
+if (__name__ == "__main__"):
+    while True:
+        search_engine()
 
