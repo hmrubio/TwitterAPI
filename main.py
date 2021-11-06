@@ -11,6 +11,7 @@ from TwitterAPI import (
     OAuthType,
 )
 import json
+from DiccionarioBloquesInvertido import CreacionDeBloques
 
 def stream_tweets(query, expansions, tweet_fields, user_fields):
 
@@ -90,6 +91,9 @@ def stream_tweets(query, expansions, tweet_fields, user_fields):
         datetimeend = datetimeend - datetimestart
         print("Duración de la prueba " + (str(datetimeend)) + " horas/minutos/segundos")
         print("------------------------------------------------------------")
+        print("Creando índice...")
+        CreacionDeBloques("data.json", "./salida")
+        print("Índice creado con éxito.")
 
     except TwitterRequestError as e:
         print(f"\n{e.status_code}")

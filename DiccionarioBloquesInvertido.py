@@ -112,32 +112,6 @@ class CreacionDeBloques:
                     json.dump(list(posting), salida, indent=None)
                     salida.write('\n')
 
-        """""
-        with open(posting_file,"w+") as salida:
-            for termID in lista_termID:
-                posting=set()
-                for data in open_files:
-                    data.seek(0)
-                    bloque = json.load(data)
-                    print("Json Recargado")
-                    try:
-                        posting = posting.union(set(bloque[termID]))
-                    except:
-                        pass
-                json.dump(list(posting), salida, indent=None)
-                salida.write("\n")
-
-            # Mal porque por cada término abre y cierra cada uno de los b.json de ./temp
-        """""
-
-        """""
-            lista = {}
-            for data in open_files:
-                bloque = json.load(data)
-                for termID in lista_termID:
-                    posting = lista.setdefault(termID, set())
-                    posting.union(set(bloque[termID]))
-        """""
     def __guardar_diccionario_terminos(self, term_to_termID, nombre_archivo_diccionario):
         path = os.path.join(self.salida, f"diccionario_{nombre_archivo_diccionario}.json")
         with open(path, "w") as contenedor:
@@ -152,7 +126,7 @@ class CreacionDeBloques:
         bloque_palabras = []  # lista de pares (termID, tweetID)
         bloque_usuarios = []
 
-        tweetID = 1  # ID de cada tweet, se puede acceder directament desde el json
+        tweetID = 0  # ID de cada tweet, se puede acceder directament desde el json
         with open(self.documento, encoding="utf-8") as file:
             for tweet in file:
                 n -= 1
@@ -160,7 +134,7 @@ class CreacionDeBloques:
                 palabras = json.loads(tweet)['data']['text'].split()  # va palabra por palabra del tweet
                 for pal in palabras:
                     if pal not in self._stop_words:
-                        # pal = self.__lematizar(pal)
+                        #pal = self.__lematizar(pal)
                         if pal not in self._term_to_termID:
                             self._term_to_termID[pal] = termID
                             termID += 1
@@ -183,9 +157,9 @@ class CreacionDeBloques:
             yield(bloque_palabras,bloque_usuarios)
 
     @staticmethod
-    def _buscar_palabra(self, palabra):
-        palabra = palabra.strip("")
-        with open(f"{self.salida}/diccionario_terminos.json", "r") as contenedor:
+    def _buscar_palabra(palabra):
+        palabra = palabra.strip('"')
+        with open("./salida/diccionario_terminos.json", "r") as contenedor:
             linea = next(contenedor, False)
             while (linea):
                 linea = json.loads(linea)
@@ -196,24 +170,15 @@ class CreacionDeBloques:
 
         conjunto = set()
         if (linea):
-            with open(f"{self.salida}/postings.json", "r") as contenedor:
-                for i in range(0, linea[1]):
-                    next(contenedor)
+            with open("./salida/postings.json", "r") as contenedor:
+                for i in range(1, linea[1]):
+                    valor = next(contenedor)
                 conjunto.update(json.loads(next(contenedor)))
 
         return conjunto
 
     @staticmethod
     def buscar_palabras(query, cantidad_tweets):
-        """
-        matches = re.findall(r'\(([^()]+)\)', query)
-        if matches:
-            for i in matches: CreacionDeBloques.buscar_palabras(i, cantidad_tweets)
-
-        lista = re.findall(r'\"(?:[^\"]+)\"|and not|and|not|or', query)
-
-        print()
-        """
 
         matches = re.findall(r'\([^()]+\)|\"(?:[^\"]+)\"|and not|and|not|or', query)
 
@@ -229,7 +194,8 @@ class CreacionDeBloques:
             if ((i - 1) > 0):
                 operador = matches[i - 1]
             elif (i == 0):
-                operador = "and"
+                out.update(conjunto)
+                operador = ""
             else:
                 operador = ""
 
@@ -238,14 +204,25 @@ class CreacionDeBloques:
             elif (operador == "or"):
                 out.update(conjunto)
             elif (operador == "and not"):
-                out.intersection_update(conjunto)
+                out.difference_update(conjunto)
 
         return out
 
 
 if ("__main__" == __name__):
-    indice = CreacionDeBloques("data.json", "./output")
+    algo = CreacionDeBloques._buscar_palabra("cambio")
+    conjunto = CreacionDeBloques.buscar_palabras('"cambio" and ("presidente" or "Google")', 10)
+    #conjunto = CreacionDeBloques.buscar_palabras('" Potro" or ("Murray" and not "Copa Davis") or "Persona"', 10)
+    print(conjunto)
 
-    # conjunto = CreacionDeBloques._buscar_palabra("reserv")
-    algo = CreacionDeBloques.buscar_palabras('"Del Potro" or ("Murray" and not "Copa Davis") or "Persona"', 10)
-    # print(conjunto)
+    with open("data.json", encoding="utf-8") as file:
+        i = 0
+
+        for tweet_number in conjunto:
+            tweet = file.readlines()[tweet_number]
+            file.seek(0)
+            text = json.loads(tweet)['data']['text']
+            print(text, '\n')
+            if i >= 15:
+                break
+            i += 1
