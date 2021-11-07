@@ -10,6 +10,10 @@ from nltk.stem.snowball import SnowballStemmer
 import diccionario_bloque_invertido
 import buscar_tweets
 
+class BadQueryFormat(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
 def search_engine():
     print("\nBuscador de información recopilada...\
     \nIngrese la opción que desea utilizar.\
@@ -82,7 +86,7 @@ def consultas_por_palabras():
     print("\nIngrese los siguientes datos por favor...\
     \
     \ni.\tCantidad de tuits (m primeros tuits)\
-    \nii.\tConsulta a realizar (por ejemplo: Adrián and Bussiness)\
+    \nii.\tConsulta a realizar (por ejemplo: \"Adrián\" and \"Bussiness\")\
         \n\t\tOpcional.*")
     
     print("\nCantidad de tuits:")
@@ -96,11 +100,13 @@ def consultas_por_palabras():
     print("\nIngrese su consulta (operadores permitidos OR, AND, NOT)...")
     while True: 
         query = input()
-        if (len(query) != 0): break
-        print("Debe ingresar una consulta...")
+        if (len(query) == 0):
+            print("Debe ingresar una consulta...")
+        else:
+            try: ejecutar_query(query, cantidad_tuits); break
+            except BadQueryFormat:
+                print("\nConsulta mal formulada. Vuelva a intentar...")
     
-    print("\n------------------------------------------------------------------------")
-    ejecutar_query(query, cantidad_tuits)
 
 def agrupar_tweets():
     print("\nIngrese los siguientes datos por favor...\
@@ -254,18 +260,25 @@ def _lematizar(palabra):
     return palabra_lematizada
 
 def _buscar_palabra(palabra):
-    palabra = _lematizar(palabra.strip('"'))
-    with open("./output/diccionario_terminos.json", "r") as contenedor:
-        linea = next(contenedor, False)
-        while (linea):
-            linea = json.loads(linea)
-            if (linea[0] == palabra):
-                break
-            else:
-                linea = next(contenedor, False)
+    if (palabra != "*"):
+        palabra = _lematizar(palabra.strip('"'))
+        with open("./output/diccionario_terminos.json", "r") as contenedor:
+            linea = next(contenedor, False)
+            while (linea):
+                linea = json.loads(linea)
+                if (linea[0] == palabra):
+                    break
+                else:
+                    linea = next(contenedor, False)
+    else: linea = "Comodin"
 
     conjunto = set()
-    if (linea):
+    if (linea == "Comodin"):
+        with open("./output/postings.json", "r") as contenedor:
+            while(contenedor):
+                try: conjunto.update(json.loads(next(contenedor)))
+                except StopIteration: break
+    elif (linea):
         with open("./output/postings.json", "r") as contenedor:
             for i in range(1, linea[1]):
                 valor = next(contenedor)
@@ -277,26 +290,48 @@ def _buscar_palabras(query):
     matches = re.findall(r'\([^()]+\)|\"(?:[^\"]+)\"|and not|and|not|or', query)
     #print(matches)
 
+    if (len(matches) % 2 == 0): 
+        if (matches[0] == "not"):
+            matches[0] = "and not"
+            matches.insert(0, "*")
+        else: 
+            raise BadQueryFormat("Falta un operador que vincule dos términos: " + query)
+
     out = set()
     for i in range(0, len(matches), 2):
         if matches[i][0] == "(":
             conjunto = _buscar_palabras(matches[i].strip("()"))
         elif (type(matches[i]) != type(set)):
-            conjunto = _buscar_palabra(matches[i])
+            texto = re.findall(r'\S+', matches[i])
 
+            conjunto = set()
+            if (len(texto) > 1):
+                for palabra in texto:
+                    conjunto.update(_buscar_palabra(palabra))
+            else:
+                conjunto = _buscar_palabra(matches[i])
+            # if (len(texto) > 1): 
+            #     aux = i
+            #     matches.pop(aux)
+
+            # for j in range(0, len(texto)*2 - 1):
+            #     if (j % 2 == 0):
+            #         matches.insert(aux, texto.pop(0))
+            #     else:
+            #         matches.insert(aux, "and")
+            #     aux += 1
+
+        operador = ""
         if ((i - 1) > 0):
             operador = matches[i - 1]
         elif (i == 0):
             out.update(conjunto)
-            operador = ""
-        else:
-            operador = ""
 
         if (operador == "and"):
             out.intersection_update(conjunto)
         elif (operador == "or"):
             out.update(conjunto)
-        elif (operador == "and not"):
+        elif (operador == "and not" or operador == "not"):
             out.difference_update(conjunto)
 
     return out
@@ -305,6 +340,8 @@ def ejecutar_query(query, cantidad_tweets):
     lista = list(_buscar_palabras(query))
     lista.sort()
     
+    print("\n------------------------------------------------------------------------")
+
     with open("data.json", encoding="utf-8") as file:
         # i = 0
 
@@ -332,7 +369,7 @@ def ejecutar_query(query, cantidad_tweets):
             print()
             print(text, '\n')
             print("------------------------------------------------------------------------")
+
 if (__name__ == "__main__"):
     while True:
         search_engine()
-
