@@ -14,12 +14,13 @@ import json
 from diccionario_bloque_invertido import CreacionDeBloques
 
 class BuscarTweets():
+    QUERY = "cambio climático OR sequías OR calentamiento global OR economía circular OR espacios verde OR protección ambiental"
+    EXPANSIONS = "author_id"
+    TWEET_FIELDS = "created_at,text"
+    USER_FIELDS = ""
+
     def __init__(self):
-        QUERY = "cambio climático OR sequías OR calentamiento global OR economía circular OR espacios verde OR protección ambiental"
-        EXPANSIONS = "author_id"
-        TWEET_FIELDS = "created_at,text"
-        USER_FIELDS = ""
-        self.stream_tweets(QUERY, EXPANSIONS, TWEET_FIELDS, USER_FIELDS)
+        self.stream_tweets(BuscarTweets.QUERY, BuscarTweets.EXPANSIONS, BuscarTweets.TWEET_FIELDS, BuscarTweets.USER_FIELDS)
 
     def stream_tweets(self, query, expansions, tweet_fields, user_fields):
 
@@ -108,8 +109,8 @@ class BuscarTweets():
             for msg in iter(e):
                 print(msg)
         except TwitterConnectionError as e:
-            print(e)
-            print("tce")
+            time.sleep(120)
+            self.stream_tweets(BuscarTweets.QUERY, BuscarTweets.EXPANSIONS, BuscarTweets.TWEET_FIELDS, BuscarTweets.USER_FIELDS)
         except Exception as e:
             print(e)
             print("e")

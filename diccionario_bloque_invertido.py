@@ -6,7 +6,6 @@ import json
 import os
 import string
 import time
-import re
 
 class CreacionDeBloques:
     def __init__(self, documento, salida, temp="./temp", language='spanish'):
