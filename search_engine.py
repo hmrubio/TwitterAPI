@@ -287,6 +287,7 @@ def _buscar_palabra(palabra):
     return conjunto
 
 def _buscar_palabras(query):
+    query = query.lower()
     matches = re.findall(r'\([^()]+\)|\"(?:[^\"]+)\"|and not|and|not|or', query)
     #print(matches)
 
@@ -303,23 +304,12 @@ def _buscar_palabras(query):
             conjunto = _buscar_palabras(matches[i].strip("()"))
         elif (type(matches[i]) != type(set)):
             texto = re.findall(r'\S+', matches[i])
-
             conjunto = set()
             if (len(texto) > 1):
                 for palabra in texto:
                     conjunto.update(_buscar_palabra(palabra))
             else:
                 conjunto = _buscar_palabra(matches[i])
-            # if (len(texto) > 1): 
-            #     aux = i
-            #     matches.pop(aux)
-
-            # for j in range(0, len(texto)*2 - 1):
-            #     if (j % 2 == 0):
-            #         matches.insert(aux, texto.pop(0))
-            #     else:
-            #         matches.insert(aux, "and")
-            #     aux += 1
 
         operador = ""
         if ((i - 1) > 0):
@@ -341,22 +331,9 @@ def ejecutar_query(query, cantidad_tweets):
     lista.sort()
     
     print("\n------------------------------------------------------------------------")
-
+    tamanio_lista = len(lista)
     with open("data.json", encoding="utf-8") as file:
-        # i = 0
-
-        # for tweet_number in conjunto:
-        #     tweet = file.readlines()[tweet_number]
-        #     file.seek(0)
-        #     text = json.loads(tweet)['data']['text']
-        #     print(text, '\n')
-
-        #     if i >= 15:
-        #         break
-        #     i += 1
-
         lines_swifted = 0
-        # print(len(lista))
         while (cantidad_tweets > 0
             and len(lista) > 0):
             posicion = lista.pop(0)
@@ -369,6 +346,7 @@ def ejecutar_query(query, cantidad_tweets):
             print()
             print(text, '\n')
             print("------------------------------------------------------------------------")
+    print("\nCantidad de Tweets encontrados: ", tamanio_lista)
 
 if (__name__ == "__main__"):
     while True:
