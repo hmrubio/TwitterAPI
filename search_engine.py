@@ -266,19 +266,19 @@ def _buscar_palabra(palabra):
             linea = next(contenedor, False)
             while (linea):
                 linea = json.loads(linea)
-                if (linea[0] == palabra):
+                if (palabra in linea[0]):
                     break
                 else:
                     linea = next(contenedor, False)
     else: linea = "Comodin"
 
     conjunto = set()
-    if (linea == "Comodin"):
+    if (linea == "Comodin"): # Devuelve todos los docIDs.
         with open("./output/postings.json", "r") as contenedor:
             while(contenedor):
                 try: conjunto.update(json.loads(next(contenedor)))
                 except StopIteration: break
-    elif (linea):
+    elif (linea): # Encontró el término buscado.
         with open("./output/postings.json", "r") as contenedor:
             for i in range(1, linea[1]):
                 valor = next(contenedor)
