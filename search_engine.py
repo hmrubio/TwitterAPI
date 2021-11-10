@@ -302,6 +302,7 @@ def _buscar_palabras(query):
     for i in range(0, len(matches), 2):
         if matches[i][0] == "(":
             conjunto = _buscar_palabras(matches[i].strip("()"))
+            
         elif (type(matches[i]) != type(set)):
             texto = re.findall(r'\S+', matches[i])
             conjunto = set()
@@ -345,6 +346,7 @@ def ejecutar_query(query, cantidad_tweets):
             text = json.loads(line)['data']['text']
             print()
             print(text, '\n')
+            print("Numero de tweet: ", lines_swifted, "\n")
             print("------------------------------------------------------------------------")
     print("\nCantidad de Tweets encontrados: ", tamanio_lista)
 

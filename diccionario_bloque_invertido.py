@@ -6,6 +6,7 @@ import json
 import os
 import string
 import time
+import re
 
 class CreacionDeBloques:
     def __init__(self, documento, salida, temp="./temp", language='spanish'):
@@ -27,14 +28,24 @@ class CreacionDeBloques:
         los signos de puntuación que pueden aparecer. El stemmer utilizado también se
         encarga de eliminar acentos y pasar todo a minúscula, sino habría que hacerlo
         a mano'''
+        
+        palabra = palabra.lower()
 
+        condition = re.compile(r'[a-z0-9]+')
+        palabra_a_armar = condition.findall(palabra)
+        palabra_out = ""
+        for word in palabra_a_armar:
+            palabra_out = palabra_out + word
+
+        '''
         # palabra = palabra.decode("utf-8", ignore).encode("utf-8")
         palabra = palabra.strip(string.punctuation + "»" + "\x97" + "¿" + "¡" + "\u201c" + \
-                                "\u201d" + "\u2014" + "\u2014l" + "\u00bf")
+                                "\u201d" + "\u2014" + "\u2014l" + "\u00bf" + u"\U0001F600-\U0001F64F" + u"\U0001F300-\U0001F5FF" + u"\U0001F680-\U0001F6FF" + \
+                                    u"\U0001F1E0-\U0001F1FF" + u"\U00002702-\U000027B0" + u"\U000024C2-\U0001F251")
         # "\x97" representa un guión
-
-        palabra_lematizada = self._stemmer.stem(palabra)
-        return palabra_lematizada
+        '''
+        # palabra_lematizada = self._stemmer.stem(palabra)
+        return palabra_out
 
     def __indexar(self):
         n = 0
@@ -84,19 +95,20 @@ class CreacionDeBloques:
 
         posting_file = os.path.join(self.salida, f"{nombre_archivo_salida}.json")
         open_files = [open(f, "r") for f in temp_files]
+        rango_a_procesar = 4000
 
         with open(posting_file, "w+") as salida:
-
+        
             for x in range(cantidad_term_group):
                 postings = {}
-                lista_parte_term_ID = [next(iter_lista, None) for i in range(1000)]
+                lista_parte_term_ID = [next(iter_lista, None) for i in range(rango_a_procesar)]
 
                 for data in open_files:
                     data.seek(0)
                     bloque = json.load(data)
 
                     i = 0
-                    while i < 1000 and lista_parte_term_ID[i]:
+                    while i < rango_a_procesar and lista_parte_term_ID[i]:
                         try:
                             postings[i] = postings.setdefault(i,set()).union(set(bloque[lista_parte_term_ID[i]]))
                         except:
@@ -148,55 +160,4 @@ class CreacionDeBloques:
                     bloque_palabras = []
                     bloque_usuarios = []
             yield(bloque_palabras,bloque_usuarios)
-
-    # @staticmethod
-    # def _buscar_palabra(palabra):
-    #     palabra = palabra.strip('"')
-    #     with open("./salida/diccionario_terminos.json", "r") as contenedor:
-    #         linea = next(contenedor, False)
-    #         while (linea):
-    #             linea = json.loads(linea)
-    #             if (linea[0] == palabra):
-    #                 break
-    #             else:
-    #                 linea = next(contenedor, False)
-
-    #     conjunto = set()
-    #     if (linea):
-    #         with open("./salida/postings.json", "r") as contenedor:
-    #             for i in range(1, linea[1]):
-    #                 next(contenedor)
-    #             conjunto.update(json.loads(next(contenedor)))
-
-    #     return conjunto
-
-    # @staticmethod
-    # def buscar_palabras(query, cantidad_tweets):
-
-    #     matches = re.findall(r'\([^()]+\)|\"(?:[^\"]+)\"|and not|and|not|or', query)
-
-    #     print(matches)
-
-    #     out = set()
-    #     for i in range(0, len(matches), 2):
-    #         if matches[i][0] == "(":
-    #             conjunto = CreacionDeBloques.buscar_palabras(matches[i].strip("()"), cantidad_tweets)
-    #         elif (type(matches[i]) != type(set)):
-    #             conjunto = CreacionDeBloques._buscar_palabra(matches[i])
-
-    #         if ((i - 1) > 0):
-    #             operador = matches[i - 1]
-    #         elif (i == 0):
-    #             out.update(conjunto)
-    #             operador = ""
-    #         else:
-    #             operador = ""
-
-    #         if (operador == "and"):
-    #             out.intersection_update(conjunto)
-    #         elif (operador == "or"):
-    #             out.update(conjunto)
-    #         elif (operador == "and not"):
-    #             out.difference_update(conjunto)
-
-    #     return out
+            
