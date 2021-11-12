@@ -187,28 +187,33 @@ def _obtener_tweet_y_fecha(archivo_tweet):
     return(tweet, fecha)
 
 def _obtener_tweets_por_fecha(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta):
-        if(usuario):
-            #Busqueda por usuario
-            _imprimir_tweets_por_usuario(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta)
-        else:
-            with open("data.json", "r", encoding="utf-8") as file:
-                tweet = next(file, None)
-                while(tweet and cantidad_a_imprimir > 0):
-                    try:
-                        tweet = json.loads(tweet)
-                        fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
-                        if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
-                            print("Tweet:")
-                            print(tweet["data"]["text"],"\n")
-                            print("Usuario:")
-                            print(tweet["data"]["author_id_hydrate"]["username"])
-                            print("Fecha:")
-                            print(tweet["data"]["created_at"], "\n")
-                            cantidad_a_imprimir -= 1
-                    except KeyError:
-                        pass
-                    finally:
-                        tweet = next(file, None)
+    if(usuario):
+        #Busqueda por usuario
+        _imprimir_tweets_por_usuario(usuario, cantidad_a_imprimir, fecha_desde, fecha_hasta)
+    else:
+        with open("data.json", "r", encoding="utf-8") as file:
+            tweet = next(file, None)
+            lines_swifted = 1
+            lista = list()
+            while(tweet and cantidad_a_imprimir > 0):
+                try:
+                    tweet = json.loads(tweet)
+                    fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
+                        lista.append(lines_swifted)
+                        print("Tweet:")
+                        print(tweet["data"]["text"],"\n")
+                        print("Usuario:")
+                        print(tweet["data"]["author_id_hydrate"]["username"])
+                        print("Fecha:")
+                        print(tweet["data"]["created_at"], "\n")
+                        cantidad_a_imprimir -= 1
+                except KeyError:
+                    pass
+                finally:
+                    tweet = next(file, None)
+                    lines_swifted += 1
+    return lista
                         
 def _buscar_usuario(palabra):
     palabra = palabra.strip("")
@@ -236,15 +241,19 @@ def _imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_de
     if len(tweets_de_este_usuario) == 1:
         return
     with open("data.json", "r", encoding="utf-8") as file:
+        lista = list()
+        lines_swifted = 0
         while (tweet_de_este_usuario_recorridos < len(tweets_de_este_usuario) and cantidad_restante_a_imprimir > 0):
             #Avanzar hasta la linea correspondiente
             for x in range(tweets_de_este_usuario[tweet_de_este_usuario_recorridos-1]+1, tweets_de_este_usuario[tweet_de_este_usuario_recorridos]):
                 next(file, None)
+                lines_swifted += 1
 
             # Compruebo que el tweet esté entre el rango de fechas
             tweet = json.loads(next(file, None))
             fecha_del_tweet = datetime.strptime(tweet["data"]["created_at"], '%Y-%m-%dT%H:%M:%S.%fZ')
             if (fecha_del_tweet >= fecha_desde and fecha_del_tweet <= fecha_hasta):
+                lista.append(lines_swifted)
                 print("Tweet:")
                 print(tweet["data"]["text"])
                 print("Usuario:")
@@ -253,6 +262,7 @@ def _imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_de
                 print(tweet["data"]["created_at"],"\n")
                 cantidad_restante_a_imprimir -= 1
             tweet_de_este_usuario_recorridos += 1
+    return lista
 
 def _reducir(palabra):
     # palabra = palabra.strip(string.punctuation + "»" + "\x97" + "¿" + "¡" + "\u201c" + \
