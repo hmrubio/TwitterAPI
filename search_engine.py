@@ -7,6 +7,7 @@ import glob
 import string
 import fileinput
 from nltk.stem.snowball import SnowballStemmer
+from unidecode import unidecode
 import diccionario_bloque_invertido
 import buscar_tweets
 
@@ -253,23 +254,39 @@ def _imprimir_tweets_por_usuario(usuario, cantidad_restante_a_imprimir, fecha_de
                 cantidad_restante_a_imprimir -= 1
             tweet_de_este_usuario_recorridos += 1
 
-def _lematizar(palabra):
-    palabra = palabra.strip(string.punctuation + "»" + "\x97" + "¿" + "¡" + "\u201c" + \
-                                "\u201d" + "\u2014" + "\u2014l" + "\u00bf")
-    palabra_lematizada = SnowballStemmer("spanish", ignore_stopwords=False).stem(palabra)
-    return palabra_lematizada
+def _reducir(palabra):
+    # palabra = palabra.strip(string.punctuation + "»" + "\x97" + "¿" + "¡" + "\u201c" + \
+    #                             "\u201d" + "\u2014" + "\u2014l" + "\u00bf")
+    # palabra_lematizada = SnowballStemmer("spanish", ignore_stopwords=False).stem(palabra)
+
+    palabra = unidecode(palabra).lower()
+    condition = re.compile(r'[a-z0-9]+')
+    palabra_a_armar = condition.findall(palabra)
+    palabra_out = ""
+    for word in palabra_a_armar:
+        palabra_out = palabra_out + word
+
+    return palabra_out
 
 def _buscar_palabra(palabra):
     if (palabra != "*"):
-        palabra = _lematizar(palabra.strip('"'))
+        palabra = _reducir(palabra.strip('"'))
         with open("./output/diccionario_terminos.json", "r") as contenedor:
-            linea = next(contenedor, False)
-            while (linea):
-                linea = json.loads(linea)
-                if (palabra in linea[0]):
-                    break
-                else:
-                    linea = next(contenedor, False)
+            # linea = next(contenedor, False)
+            # while (linea):
+            #     linea = json.loads(linea)
+            #     if (palabra in linea[0]):
+            #         break
+            #     else:
+            #         linea = next(contenedor, False)
+            linea = list()
+            for i in contenedor:
+                aux = json.loads(i)
+                if palabra in aux[0]:
+                    linea.append(aux)
+
+            if len(linea) == 0: linea = False
+
     else: linea = "Comodin"
 
     conjunto = set()
@@ -280,9 +297,15 @@ def _buscar_palabra(palabra):
                 except StopIteration: break
     elif (linea): # Encontró el término buscado.
         with open("./output/postings.json", "r") as contenedor:
-            for i in range(1, linea[1]):
-                valor = next(contenedor)
-            conjunto.update(json.loads(next(contenedor)))
+            # for i in range(1, linea[1]):
+            #     valor = next(contenedor)
+            # conjunto.update(json.loads(next(contenedor)))
+            lines_swifted = 1
+            for i in contenedor:
+                if (len(linea) > 0 and linea[0][1] == lines_swifted):
+                    conjunto.update(json.loads(i))
+                    linea.pop(0)
+                lines_swifted += 1
 
     return conjunto
 

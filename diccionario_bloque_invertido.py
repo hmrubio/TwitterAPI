@@ -2,6 +2,7 @@ import datetime
 
 from nltk.stem import SnowballStemmer  # Stemmer
 from nltk.corpus import stopwords  # Stopwords
+from unidecode import unidecode
 import json
 import os
 import string
@@ -29,7 +30,7 @@ class CreacionDeBloques:
         encarga de eliminar acentos y pasar todo a minúscula, sino habría que hacerlo
         a mano'''
         
-        palabra = palabra.lower()
+        palabra = unidecode(palabra).lower()
 
         condition = re.compile(r'[a-z0-9]+')
         palabra_a_armar = condition.findall(palabra)
